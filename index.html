@@ -143,7 +143,7 @@ h1.big span{display:inline-block;transition:transform .55s cubic-bezier(.5,-0.4,
 <div class="scr dim" id="hub"><div class="scroll">
   <div class="meta"><span id="hubSlot"></span> · <span id="hubWallet" class="wallet"></span></div>
   <div class="sub" id="hubPct" style="margin:0 0 6px"></div>
-  <div class="btnrow"><span class="go" id="hubCont">Play</span><span class="go gold" id="hubShop">Shop</span><span class="go gold" id="hubWard">Wardrobe</span><span class="go gold" id="hubLore">Lore</span><span class="go ghost" id="hubBack">Saves</span></div>
+  <div class="btnrow"><span class="go" id="hubCont">Play</span><span class="go gold" id="hubShop">Shop</span><span class="go gold" id="hubWard">Wardrobe</span><span class="go gold" id="hubLore">Lore</span><span class="go" id="hubRush" style="display:none;--tc:#ff5a5a">Boss Rush</span><span class="go ghost" id="hubBack">Saves</span></div>
   <div id="map"></div>
 </div></div>
 <div class="scr solid" id="shop"><div class="scroll">
@@ -670,7 +670,7 @@ function buildLevel(li){
   const zone=new Uint8Array(W).fill(def.theme);
   const f=(x0,y0,x1,y1,v)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(x>=0&&x<W&&y>=-UP&&y<H)G[y][x]=v};
   const SURF=[];for(let y=0;y<H;y++)SURF.push(new Uint8Array(W));
-  const Lv={li,id:def.id,name:def.name,boss:!!def.boss,final:!!def.final,area:def.area,W,G,zone,SURF,words:[],rain:[],gates:[],arenas:[],rainT:0,strikeZones:[],strikes:[],thorns:[],sparks:[],plats:[],crumbles:[],haz:[],vents:[],pads:[],water:[],curr:[],glines:[],motes:[],npcs:[],secrets:{},cps:[],narr:[],parts:[],segs:[],exit:null,bench:null,pip:null,warm:[],cores:[],fish:[],lifts:[],pursuer:def.pursuer||null,fx:def.fx||null,darkT:0,dying:null,darkZones:[],glows:[],towers:[],chests:[],runner:null,stations:[],keeper:null,stall:!!def.stall,custom:!!def.custom};
+  const Lv={li,id:def.id,name:def.name,rush:!!def.rush,boss:!!def.boss,final:!!def.final,area:def.area,W,G,zone,SURF,words:[],rain:[],gates:[],arenas:[],rainT:0,strikeZones:[],strikes:[],thorns:[],sparks:[],plats:[],crumbles:[],haz:[],vents:[],pads:[],water:[],curr:[],glines:[],motes:[],npcs:[],secrets:{},cps:[],narr:[],parts:[],segs:[],exit:null,bench:null,pip:null,warm:[],cores:[],fish:[],lifts:[],pursuer:def.pursuer||null,fx:def.fx||null,darkT:0,dying:null,darkZones:[],glows:[],towers:[],chests:[],runner:null,stations:[],keeper:null,stall:!!def.stall,custom:!!def.custom};
   f(0,0,W-1,1,1);f(0,13,W-1,15,1);f(0,0,0,15,1);f(W-1,0,W-1,15,1);
   let cur=null;
   const B={mir:0,fill:f,
@@ -710,7 +710,7 @@ function buildLevel(li){
     chest(x,y,id){Lv.chests.push({x:x*T,y:y*T,id,got:false});},
     exit(x){Lv.exit={x:x*T,y:13*T-56,w:36,h:56};}};
   let x=1;
-  def.parts.forEach((pt,pi)=>{Lv.parts.push({x0:x,name:pt.name,wall:pt.wall||0});const th=pt.theme!==undefined?pt.theme:def.theme;
+  def.parts.forEach((pt,pi)=>{Lv.parts.push({x0:x,name:pt.name,wall:pt.wall||0,pursuer:pt.pursuer});const th=pt.theme!==undefined?pt.theme:def.theme;
     pt.segs.forEach(([t,p],si)=>{const w=SEG[t].w(p);cur={t,p,x0:x,w,plats:[],crumbles:[],haz:[],vents:[],curr:[],pads:[],arena:null,spark:null,part:pi};Lv.segs.push(cur);
       for(let i=x;i<x+w&&i<W;i++)zone[i]=th;
       if(si===0&&pi>0&&!Lv.boss)B.cp(x);
@@ -1097,7 +1097,7 @@ function step(dt){
   const pip=L.pip;if(pip){if(pip.st===0&&ov(P.x-6,P.y-6,P.w+12,P.h+12,pip.x-6,pip.y,12,12)){pip.st=1;pip.bub="Eep! You're upside down too!";pip.bt=3;tone(1200,1600,.12,'sine',.06);tone(1500,2000,.12,'sine',.05,.1);}
     if(pip.st===1){const moss=L.npcs.find(n=>n.id==='moss');if(moss&&Math.abs(pip.x-(moss.x+moss.w/2))<90&&Math.abs(pip.y-moss.y)<120){pip.st=2;pip.bub='Moss!!';pip.bt=2.5;moss.li=0;moss.lt=0;unlock('sprout');}}}
   // cores (boss)
-  for(const c of L.cores)if(!c.hit&&ov(P.x,P.y,P.w,P.h,c.x-26,2*T,52,11*T)){c.hit=true;coreFlash=1;shake=.5;wall.x=Math.min(wall.x,P.x-12*T);
+  for(const c of L.cores)if(!c.hit&&ov(P.x,P.y,P.w,P.h,c.x-26,2*T,52,11*T)){c.hit=true;coreFlash=1;shake=.5;if(L.rush)rushCore(L,c);wall.x=Math.min(wall.x,P.x-12*T);
     sfx('shatter');toast('Core shattered · '+L.cores.filter(k=>k.hit).length+' / '+L.cores.length);
     if(L.cores.every(k=>k.hit)&&!L.dying){L.dying={t:0};L.strikes.length=0;L.darkT=0;wall.x=P.x-9*T;wall.tele=0;wall.lunge=0;sfx('defeat');setTimeout(()=>{if(G_===L)UI.bossDown(L.name);},900);}
     for(let i=0;i<40;i++){const a=Math.random()*6.28,v=100+Math.random()*400;parts.push({x:c.x,y:c.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1,m:1,s:3+Math.random()*5,c:i%2?'#ffffff':'#9fe8ff',g:0});}}
@@ -1117,7 +1117,7 @@ function step(dt){
   // checkpoints
   for(let i=cp+1;i<L.cps.length;i++)if(P.x>=L.cps[i]*T){cp=i;L.shellUsed=false;P.shell=pw('shell');sfx('checkpoint');UI.checkpoint(cp);}
   for(const [tx,t] of L.narr)if(!narrDone.has(tx)&&P.x>=tx*T){narrDone.add(tx);say(t);}
-  const pi=partAt(P.x);if(pi!==curPart){const first=curPart<0;curPart=pi;UI.part(pi,first);}
+  const pi=partAt(P.x);if(pi!==curPart){const first=curPart<0;curPart=pi;if(L.rush)rushPart(L,pi,first);UI.part(pi,first);}
   if(L.exit&&ov(P.x,P.y,P.w,P.h,L.exit.x,L.exit.y,L.exit.w,L.exit.h)&&(!L.boss||L.cores.every(c=>c.hit))&&(!L.runner||L.runner.st==='done')){won=true;
     sfx('win');setTimeout(()=>UI.complete(),1500);}
   if(P.ground&&!W_&&Math.abs(P.vx)>120){P.stepD=(P.stepD||0)+Math.abs(P.vx)*dt;if(P.stepD>38){P.stepD=0;sfx('step',{surf:P.surf,z:L.zone[Math.max(0,Math.min(L.W-1,Math.floor(P.x/T)))]});}}
@@ -2335,7 +2335,7 @@ function openChest(ch){if(!SL)return;SL.chests=SL.chests||[];const first=!SL.che
   shake=.2;sfx('chest');
   if(!first)return;const it=CHESTITEM[ch.id];if(it)grantAcc(it,'Chest');else{SL.wallet+=25;SL.earned+=25;toast('Chest · ◆ 25');}checkConds();}
 function mysteryBox(){const left=POOL.mystery.concat(POOL.shop).filter(id=>!accOwned(SL,id));if(!left.length)return null;const myst=left.filter(id=>ACC[id].src==='mystery');const pick=(myst.length&&Math.random()<.6?myst:left);return pick[Math.floor(Math.random()*pick.length)];}
-function accHint(id){const a=ACC[id];if(!a)return '';if(a.src==='shop')return `Shop · ◆ ${a.price}`;if(a.src==='chest')return `Sky-room chest · ${a.where}`;if(a.src==='cond')return a.cond.name();if(a.src==='boss')return `Defeat ${LEVELS.find(l=>l.id===a.boss).name}`;if(a.src==='trader')return 'Catch the Trader';if(a.src==='menu')return 'A secret on the title screen';return 'Mystery Box';}
+function accHint(id){const a=ACC[id];if(!a)return '';if(a.src==='rush')return 'Boss Rush · '+a.rhint;if(a.src==='shop')return `Shop · ◆ ${a.price}`;if(a.src==='chest')return `Sky-room chest · ${a.where}`;if(a.src==='cond')return a.cond.name();if(a.src==='boss')return `Defeat ${LEVELS.find(l=>l.id===a.boss).name}`;if(a.src==='trader')return 'Catch the Trader';if(a.src==='menu')return 'A secret on the title screen';return 'Mystery Box';}
 
 // ---------- drawing (cube-local coordinates, body is -15..15, f = facing) ----------
 function star(c,x,y,r,n){c.beginPath();for(let i=0;i<n*2;i++){const rr=i%2?r*.45:r,a=i*Math.PI/n-Math.PI/2;c.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}c.closePath();c.fill();}
@@ -2438,9 +2438,9 @@ function accPreview(cv2,id){const c2=cv2.getContext('2d');c2.setTransform(2,0,0,
   const o={};if(ACC[id]){o.gen={};o.gen[s]=ACC[id];}else o[id]=1;
   drawCube(c2,36,38,0,1,1,1,(id==='comet'||id==='startrail')?{}:o,menuT,s==='cape'||s==='back'||id==='scarf'?180:0);}
 
-function ownsAll(s){if(!s)return false;const ids=Object.keys(COS).concat(Object.keys(ACC)).filter(id=>id!=='tr_trader');return ids.every(id=>s.secrets.includes(id)||s.owned.includes(id)||accOwned(s,id));}
+function ownsAll(s){if(!s)return false;const ids=Object.keys(COS).concat(Object.keys(ACC)).filter(id=>id!=='tr_trader'&&!(ACC[id]&&ACC[id].src==='rush'));return ids.every(id=>s.secrets.includes(id)||s.owned.includes(id)||accOwned(s,id));}
 // ================= SAVES =================
-const SKEY='cube_v3';const ROMAN=['I','II','III','IV','V','VI'];
+const SKEY='cube_v3';const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
 let SAVE={slots:[null,null,null]},SL=null,slotIdx=-1;
 try{const d=JSON.parse(localStorage.getItem(SKEY)||'null');if(d&&d.slots)SAVE=d;else{const old=JSON.parse(localStorage.getItem('cube_gravity_v2')||'null');if(old&&old.u&&old.u.length){SAVE.slots[0]=newSlot();SAVE.slots[0].secrets=old.u.filter(k=>SEC[k]);SAVE.slots[0].migrated=1;}}}catch(e){}
 function newSlot(){return {created:Date.now(),play:0,wallet:0,earned:0,motes:{},cleared:{},best:{},deaths:0,secrets:[],equip:{cape:true},owned:[],power:{},at:{li:0,cp:0}};}
@@ -2452,7 +2452,7 @@ const fmtT=s=>{s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s/60)%60,
 function progress(s){let n=0;LEVELS.forEach(l=>{if(s.cleared[l.id])n+=7;});n+=s.secrets.length*2;n+=Math.min(20,Math.floor(s.earned/25));return Math.min(100,n);}
 function unlocked(li){return li===0||!!(SL&&(SL.cleared[LEVELS[li-1].id]||SL.cleared[LEVELS[li].id]));}
 const OLD_ORDER=['walls','crusher','meadow','bramble','forest','rot','beach','tide','water','undertow','fire','magma','town','blackout','mountain','boss','citadel','trader'];
-function setAt(li,cp){SL.at={li,cp:cp||0,id:LEVELS[li]?LEVELS[li].id:null};}
+function setAt(li,cp){if(LEVELS[li]&&LEVELS[li].rush)return;SL.at={li,cp:cp||0,id:LEVELS[li]?LEVELS[li].id:null};}
 function atLi(){const a=SL.at||{li:0,cp:0};if(!a.id)a.id=OLD_ORDER[a.li]||(LEVELS[a.li]||{}).id;let i=LEVELS.findIndex(l=>l.id===a.id);if(i<0)i=0;if(!unlocked(i)){i=0;while(i<LEVELS.length-1&&unlocked(i+1)&&!LEVELS[i+1].hidden&&SL.cleared[LEVELS[i].id])i++;a.cp=0;}a.li=i;SL.at=a;return i;}
 
 // ================= SCREENS =================
@@ -2477,7 +2477,7 @@ function confirmBox(msg,yes,no){$('cMsg').textContent=msg;const y=$('cYes'),n=$(
 function openSlot(i){slotIdx=i;SL=SAVE.slots[i];persist(true);buildHub();show('hub');}
 // ---- hub / map ----
 const THEMECOL=['#ff8a5c','#7ddc6a','#7fd6ff','#ffab5c','#a8c07a','#ffd9a0','#ffd27a','#e6f4ff','#ffe2a0','#9ab86a','#f0a070','#b9a0ff'];const BOSSCOL={crusher:'#ff3b3b',bramble:'#ffe066',undertow:'#bff4ff',magma:'#ff8a2a',cold:'#cfe8ff',rot:'#d06cff',tide:'#5fe0d0',blackout:'#ffffff',rust:'#9ab86a',condor:'#d8b48a',centi:'#b9a0ff'};
-function buildHub(){if(SL)setTimeout(checkConds,600);$('hubSlot').textContent=`Slot ${slotIdx+1}`;$('hubWallet').textContent=`◆ ${SL.wallet}`;$('hubPct').textContent=`${progress(SL)}% complete · ✦ ${SL.secrets.length}/10 secrets · ${fmtT(SL.play)}`;
+function buildHub(){try{rushHub();}catch(e){}if(SL)setTimeout(checkConds,600);$('hubSlot').textContent=`Slot ${slotIdx+1}`;$('hubWallet').textContent=`◆ ${SL.wallet}`;$('hubPct').textContent=`${progress(SL)}% complete · ✦ ${SL.secrets.length}/10 secrets · ${fmtT(SL.play)}`;
   const m=$('map');m.innerHTML='';
   LEVELS.forEach((L,li)=>{if(L.stall||L.custom)return;if(L.hidden&&!(SL.cleared.citadel&&(ownsAll(SL)||SL.stolen||SL.cleared[L.id])))return;const un=unlocked(li),cl=SL.cleared[L.id];const got=(SL.motes[L.id]||[]).length,tot=moteTotal(li);
     const c=el('div','node'+(un?'':' locked')+(cl?' cleared':'')+(L.boss?' boss':''));c.style.setProperty('--tc',L.boss?BOSSCOL[L.pursuer]:THEMECOL[L.theme]);
@@ -2494,7 +2494,7 @@ let stallSt=null;function stallTick(){const L=G_;const b=$('stallBtn');if(mode!=
   stallSt=L.stations.find(s=>Math.abs(P.x+15-s.x)<1.4*T)||null;const shopOpen=!$('shop').classList.contains('hide');if(stallSt&&!shopOpen){b.textContent=stallSt.label;b.classList.remove('hide');}else b.classList.add('hide');}
 function openStation(){if(!stallSt)return;shopTab=stallSt.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===shopTab));buildShop();show('shop');$('stallBtn').classList.add('hide');}
 onTap($('stallBtn'),openStation);addEventListener('keydown',e=>{if((e.key==='e'||e.key==='E'||e.key==='Enter')&&G_&&G_.stall&&mode==='game'&&$('shop').classList.contains('hide'))openStation();});
-onTap($('hubShop'),()=>enterStall());
+onTap($('hubShop'),()=>enterStall());onTap($('hubRush'),()=>{au();startRush();});
 onTap($('hubWard'),()=>{backFromWard='hub';buildWard();show('ward');});
 onTap($('hubLore'),()=>{buildLore();show('lore');});
 onTap($('hubBack'),()=>{persist(true);buildSlots();show('slots');});
@@ -2562,7 +2562,7 @@ const TIPS=["In the citadel, the narrator gives orders. Don't follow them.","Bos
 const lc=$('lc'),lx=lc.getContext('2d');let loadT=0,loadCb=null,loadLi=0,loadDur=2.4;
 function startLevel(li,startCp){mode='load';setAt(li,startCp);persist();show('load');loadT=0;loadLi=li;const L=LEVELS[li];
   $('lName').textContent='';$('lParts').innerHTML=L.parts.map((p,i)=>`<span>${ROMAN[i]} · ${p.name}</span>`).join('');$('lTip').textContent=TIPS[Math.floor(Math.random()*TIPS.length)];
-  $('lKind').textContent=L.final?'THE FINAL AREA':L.boss?`BOSS · AREA ${L.area}`:`AREA ${L.area} OF 11`;
+  $('lKind').textContent=L.rush?'BOSS RUSH · ELEVEN BOSSES, ONE RUN':L.final?'THE FINAL AREA':L.boss?`BOSS · AREA ${L.area}`:`AREA ${L.area} OF 11`;
   loadCb=()=>{loadLevel(li,startCp||0);mode='game';paused=false;clearInput();show(null);};}
 function drawLoad(dt){loadT+=dt;const L=LEVELS[loadLi];const k=Math.min(1,loadT/loadDur);
   const full=L.name;$('lName').textContent=full.slice(0,Math.ceil(full.length*Math.min(1,loadT/1.0)));$('lBar').style.width=(k*100)+'%';
@@ -2600,9 +2600,9 @@ UI.checkpoint=c=>{setAt(G_.li,c);persist();};
 UI.part=(pi,first)=>{if(G_&&G_.stall)return;const L=G_;$('pwName').textContent=L.name.toUpperCase();$('pwPart').textContent=`${ROMAN[pi]} · ${L.parts[pi].name}`;
   const pw_=$('pwPips');if(pw_.children.length!==L.parts.length)pw_.innerHTML='<i></i>'.repeat(L.parts.length);const pips=pw_.children;for(let i=0;i<pips.length;i++)pips[i].className=i<pi?'done':i===pi?'on':'';
   const c=$('card');c.querySelector('.k').textContent=first?(L.boss?'RUN':L.name.toUpperCase()):`PART ${ROMAN[pi]}`;c.querySelector('.n').textContent=first?(L.boss?L.name:`${ROMAN[pi]} · ${L.parts[pi].name}`):L.parts[pi].name;
-  c.classList.remove('show');void c.offsetWidth;c.classList.add('show');tone(330,330,.4,'sine',.04);tone(495,495,.5,'sine',.03,.15);};
+  if(L.rush){c.querySelector('.k').textContent=`BOSS ${pi+1} OF ${L.parts.length}`;c.querySelector('.n').textContent=LEVELS[L.li].parts[pi].boss;}c.classList.remove('show');void c.offsetWidth;c.classList.add('show');tone(330,330,.4,'sine',.04);tone(495,495,.5,'sine',.03,.15);};
 UI.bossDown=nm=>{const c=$('card');c.querySelector('.k').textContent='DEFEATED';c.querySelector('.n').textContent=nm;c.classList.remove('show');void c.offsetWidth;c.classList.add('show');[392,523,659,784].forEach((f,i)=>tone(f,f,.6,'sine',.05,i*.14));};
-UI.complete=()=>{if(G_&&G_.custom){toast(`Cleared in ${fmtT(time)} · ${deaths} ${deaths===1?'fall':'falls'}`);edBack();return;}const L=G_;const id=L.id;const first=!SL.cleared[id];if(deaths===0){SL.flawless=SL.flawless||{};SL.flawless[id]=1;}let bonus=0;if(first){bonus=L.boss?50:25;SL.wallet+=bonus;SL.earned+=bonus;SL.cleared[id]=1;}
+UI.complete=()=>{if(G_&&G_.rush){rushDone();return;}if(G_&&G_.custom){toast(`Cleared in ${fmtT(time)} · ${deaths} ${deaths===1?'fall':'falls'}`);edBack();return;}const L=G_;const id=L.id;const first=!SL.cleared[id];if(deaths===0){SL.flawless=SL.flawless||{};SL.flawless[id]=1;}let bonus=0;if(first){bonus=L.boss?50:25;SL.wallet+=bonus;SL.earned+=bonus;SL.cleared[id]=1;}
   SL.best[id]=Math.min(SL.best[id]||1e9,time);SL.deaths+=deaths;setAt(Math.min(L.li+1,LEVELS.findIndex(l=>l.final)),0);persist(true);checkConds();mode='menu';
   if(L.final){runEnding();return;}
   $('rName').textContent=L.name;$('rStats').textContent=`Time ${time.toFixed(1)}s  ·  Deaths ${deaths}  ·  Best ${SL.best[id].toFixed(1)}s`;
@@ -2905,6 +2905,78 @@ function drawEditor(dt){menuT+=dt;const t=menuT;cx.setTransform(DPR,0,0,DPR,0,0)
   cx.restore();
   // scroll bar
   const vis=a.width/cs,bw=a.width*Math.min(1,vis/ED.w),bx=a.left+(a.width-bw)*(ED.w>vis?edScroll/(ED.w-vis):0);cx.fillStyle='rgba(255,255,255,.12)';cx.fillRect(a.left,a.bottom-4,a.width,3);cx.fillStyle='#ffd970';cx.fillRect(bx,a.bottom-4,bw,3);}
+// ================= BOSS RUSH v0.19 =================
+// Unlocked after the Citadel. One run through all eleven bosses in story order: one chase part from
+// each, picked at random. The boss changes as you cross into its part. 25 accessories are won here.
+const RUSH_ORDER=['crusher','rust','bramble','condor','rot','tide','undertow','magma','blackout','boss','centi'];
+LEVELS.push({id:'rush',hidden:1,rush:1,boss:1,pursuer:'crusher',name:'Boss Rush',theme:0,area:0,parts:[]});
+function rushSeedRnd(seed){let s=seed>>>0||1;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+function buildRush(seed){const R=seed?rushSeedRnd(seed):Math.random,L=LEVELS.find(l=>l.rush);L.parts=[];
+  RUSH_ORDER.forEach((id,bi)=>{const B=LEVELS.find(l=>l.id===id);if(!B)return;const pi=Math.floor(R()*B.parts.length),pt=JSON.parse(JSON.stringify(B.parts[pi]));
+    let segs=pt.segs.filter(([t])=>t!=='exit');
+    if(bi>0){segs=segs.map(s=>s[0]==='start'?['bossrun',{n:6}]:s);if(segs[0][0]!=='bossrun'){const wet=segs.some(([t,p])=>p&&p.water);segs.unshift(['bossrun',wet?{n:10,water:1}:{n:6}]);}}
+    if(bi===RUSH_ORDER.length-1)segs.push(['exit',{}]);
+    L.parts.push({name:pt.name,theme:pt.theme!==undefined?pt.theme:B.theme,wall:pt.wall,segs,pursuer:B.pursuer,boss:B.name,bossId:id});});
+  L.pursuer=L.parts[0].pursuer;L.theme=L.parts[0].theme;delete LINFO[LEVELS.indexOf(L)];return L;}
+let RUN=null;
+function rushUnlocked(){return !!(SL&&SL.cleared&&SL.cleared.citadel);}
+function rushStats(){SL.rush=SL.rush||{clears:0,best:0,bestDeaths:99,beat:{},total:0,flawless:0,deep:0};return SL.rush;}
+function rushHub(){const b=$('hubRush');if(!b)return;const on=rushUnlocked();b.style.display=on?'':'none';if(!on)return;const r=rushStats();
+  b.textContent=r.clears?`Boss Rush · best ${fmtT(r.best)}`:'Boss Rush';}
+function startRush(){if(!rushUnlocked())return;buildRush(window.__rushSeed||0);RUN={deaths:0,beat:0,t0:0,clean:0};startLevel(LEVELS.findIndex(l=>l.rush),0);}
+// called by the engine when the player enters a new part
+function rushPart(L,pi,first){const pt=LEVELS[L.li].parts[pi];if(!pt)return;const nk=pt.pursuer;
+  if(L.pursuer!==nk||first){const old=L.pursuer;L.pursuer=nk;L.name=pt.boss;
+    if(wall&&!first){for(let i=0;i<70;i++){const a=Math.random()*6.28,v=80+Math.random()*340,c=(DFRAG[old]||['#888','#ccc'])[i%2];parts.push({x:wall.x-120+Math.random()*120,y:3*T+Math.random()*9*T,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1.2,m:1.2,s:3+Math.random()*6,c,g:.6});}
+      shake=.5;sfx('roar',{k:nk,big:1});}
+    if(wall){wall.anim=null;wall.tele=0;wall.lunge=0;wall.charge=0;wall.cd=2.4;wall.x=Math.min(wall.x,P.x-11*T);}
+    L.strikes.length=0;L.darkT=0;}}
+function rushCore(L,c){if(!RUN)return;const pi=partAt(c.x),pt=LEVELS[L.li].parts[pi];if(!pt||pt.done)return;pt.done=1;RUN.beat++;
+  if(!deaths)RUN.clean=RUN.beat;const r=rushStats();r.beat[pt.bossId]=1;r.total++;r.deep=Math.max(r.deep,RUN.clean);
+  toast(`${pt.boss} · down ${RUN.beat} / ${RUSH_ORDER.length}`);rushGrant();persist();}
+// ---------- the 25 Boss Rush accessories ----------
+const RUSHPAR=[0,0,0];// [gold, silver, bronze] par times in seconds, set from the route length below
+const RUSHACC=[
+ // one for each boss you take down in a run
+ ['crusher','goggles','face','Furnace Goggles','#ff8a5c','#3a2a1a'],
+ ['rust','tattered','cape','Rust-Eaten Cloak','#8a5a2a','#9ab86a'],
+ ['bramble','flowers','hat','Thorn Crown','#3a6a2a','#c83a5a'],
+ ['condor','tleaves','trail','Stone Feather Trail','#a89a8a','#e8dcc4'],
+ ['rot','mushroom','hat','Rotcap','#6a4a8a','#c8e070'],
+ ['tide','tbubbles','trail','Tidewater Trail','#5fe0d0','#e8fffb'],
+ ['undertow','lei','neck','Kelp Lei','#2a8a6a','#5fe0d0'],
+ ['magma','aflame','aura','Magma Aura','#ff5a1a','#ffd27a'],
+ ['blackout','mask','face','Lamp-Eater Mask','#111111','#ffd27a'],
+ ['boss','tsnow','trail','Yeti Frost Trail','#cfe8ff','#ffffff'],
+ ['centi','stareyes','face','Crystal Eyes','#b9a0ff','#e8deff']];
+const RUSHGOAL=[
+ ['first','royal','cape','Rush Mantle','#c82a2a','#ffcf3a','Clear a Boss Rush',r=>r.clears>=1],
+ ['c3','medal','neck','Bronze Rush Medal','#c8803a','#6a3a1a','Clear 3 Boss Rushes',r=>r.clears>=3],
+ ['c5','medal','neck','Silver Rush Medal','#d0d8e0','#6a7a8a','Clear 5 Boss Rushes',r=>r.clears>=5],
+ ['c10','medal','neck','Gold Rush Medal','#ffcf3a','#8a5a1a','Clear 10 Boss Rushes',r=>r.clears>=10],
+ ['d10','shield','back',"Survivor's Shield",'#7a8a9a','#ffcf3a','Clear with 10 falls or fewer',r=>r.bestDeaths<=10],
+ ['d5','helm','hat','Gauntlet Helm','#9aa4b0','#c82a2a','Clear with 5 falls or fewer',r=>r.bestDeaths<=5],
+ ['d2','sword','back',"Champion's Blade",'#e8eef4','#ffcf3a','Clear with 2 falls or fewer',r=>r.bestDeaths<=2],
+ ['d0','starcape','cape','Deathless Cape','#1a1040','#ffe9a8','Clear without falling once',r=>r.flawless>=1],
+ ['t3','tsparkle','trail','Quick Spark Trail','#ffcf3a','#ffffff',()=>`Clear in under ${fmtT(RUSHPAR[2])}`,r=>r.clears&&r.best<=RUSHPAR[2]],
+ ['t2','jetpack','back','Rush Jetpack','#c82a2a','#ffcf3a',()=>`Clear in under ${fmtT(RUSHPAR[1])}`,r=>r.clears&&r.best<=RUSHPAR[1]],
+ ['t1','trainbow','trail','Afterimage Trail','#ff5a5a','#5fe0d0',()=>`Clear in under ${fmtT(RUSHPAR[0])}`,r=>r.clears&&r.best<=RUSHPAR[0]],
+ ['deep','wdragon','back','Gauntlet Wings','#5a1a1a','#ff8a5c','Take down 6 bosses in a row without falling',r=>r.deep>=6],
+ ['b50','aorbit','aura','Eleven Orbiters','#ffcf3a','#ff5a5a','Take down 50 bosses in Boss Rush',r=>r.total>=50],
+ ['crown','tiara','hat','Rush Crown','#ffcf3a','#c82a2a',()=>`Clear without falling, in under ${fmtT(RUSHPAR[0])}`,r=>r.crown>=1]];
+for(const [b,type,slot,name,c1,c2] of RUSHACC){const B=LEVELS.find(l=>l.id===b);ACC['br_'+b]={id:'br_'+b,type,slot,name,c1,c2,src:'rush',rhint:`Take down ${B?B.name:b} in a run`};}
+for(const [k,type,slot,name,c1,c2,h] of RUSHGOAL)ACC['br_'+k]={id:'br_'+k,type,slot,name,c1,c2,src:'rush',get rhint(){return typeof h==='function'?h():h;}};
+function rushGrant(){if(!SL)return;const r=rushStats();for(const [b] of RUSHACC)if(r.beat[b])grantAcc('br_'+b,'Boss Rush');for(const g of RUSHGOAL)if(g[7](r))grantAcc('br_'+g[0],'Boss Rush');}
+function rushPar(){if(RUSHPAR[0])return;let W=0;const L=LEVELS.find(l=>l.rush);RUSH_ORDER.forEach(id=>{const B=LEVELS.find(l=>l.id===id);let m=0;B.parts.forEach(pt=>{let w=0;pt.segs.forEach(([t,p])=>w+=SEG[t].w(p));m+=w;});W+=m/B.parts.length;});
+  const base=W*T/265;RUSHPAR[0]=Math.round(base*1.5/10)*10;RUSHPAR[1]=Math.round(base*2.0/10)*10;RUSHPAR[2]=Math.round(base*2.8/10)*10;}
+rushPar();
+function rushDone(){const r=rushStats(),first=!r.clears;r.clears++;const t=time;r.best=r.best?Math.min(r.best,t):t;r.bestDeaths=Math.min(r.bestDeaths,deaths);if(!deaths)r.flawless++;if(!deaths&&t<=RUSHPAR[0])r.crown=1;
+  const bonus=first?150:40;SL.wallet+=bonus;SL.earned+=bonus;SL.deaths+=deaths;rushGrant();checkConds();persist(true);mode='menu';
+  $('rName').textContent='Boss Rush cleared';$('rStats').textContent=`Time ${fmtT(t)}  ·  Falls ${deaths}  ·  Best ${fmtT(r.best)}`;
+  $('rMotes').textContent=`Clears ${r.clears}  ·  Bosses taken down ${r.total}  ·  ◆ +${bonus}`;
+  const got=Object.keys(ACC).filter(id=>ACC[id].src==='rush'&&accOwned(SL,id)).length;$('rSec').textContent=`Boss Rush accessories ${got} / 25  ·  Wallet ◆ ${SL.wallet}`;
+  const nx=$('rNext');nx.textContent='Run it again';nx.onclick=e=>{e.preventDefault();au();startRush();};RUN=null;show('result');}
+window.__cube.buildRush=buildRush;window.__cube.rushPar=RUSHPAR;
 })();
 </script>
 </body></html>
